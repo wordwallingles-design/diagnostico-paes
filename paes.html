@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Diagnóstico PAES</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body {
+    font-family: "Segoe UI", Arial;
+    background:#eef1f5;
+    margin:0;
+    color:#333;
+}
+
+.header {
+    background:#c62828;
+    color:white;
+    text-align:center;
+    padding:20px;
+}
+
+.container {
+    max-width:800px;
+    margin:20px auto;
+    background:white;
+    padding:25px;
+    border-radius:10px;
+}
+
+.row {
+    display:flex;
+    gap:10px;
+    margin-bottom:20px;
+}
+
+input[type="text"], input[type="number"] {
+    flex:1;
+    padding:10px;
+    border:1px solid #ccc;
+    border-radius:6px;
+}
+
+.text-box {
+    background:#f9f9f9;
+    padding:15px;
+    border-left:5px solid #c62828;
+    margin-bottom:20px;
+    line-height:1.6;
+}
+
+.section-title {
+    margin-top:20px;
+    margin-bottom:10px;
+    font-weight:bold;
+    color:#c62828;
+}
+
+.question {
+    margin-bottom:15px;
+    padding-bottom:10px;
+    border-bottom:1px solid #eee;
+}
+
+.question-title {
+    margin-bottom:6px;
+}
+
+/* 🔥 FIX CLAVE */
+.options {
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.option {
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.option input {
+    margin:0;
+}
+
+button {
+    background:#c62828;
+    color:white;
+    border:none;
+    padding:12px;
+    width:100%;
+    border-radius:6px;
+    cursor:pointer;
+    margin-top:10px;
+}
+
+.result {
+    margin-top:20px;
+    padding:15px;
+    background:#fafafa;
+    border-radius:8px;
+}
+
+.progress {
+    background:#ddd;
+    border-radius:20px;
+    overflow:hidden;
+    margin:5px 0 10px;
+}
+
+.bar {
+    height:18px;
+    color:white;
+    text-align:center;
+    font-size:12px;
+}
+
+.good { background:#2e7d32; }
+.mid { background:#f9a825; }
+.bad { background:#c62828; }
+
+.weak {
+    color:#c62828;
+    font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<h2>DIAGNÓSTICO DE COMPETENCIAS LECTORAS – BASE PAES</h2>
+<p>Prepárate con Profe Lilí</p>
+</div>
+
+<div class="container">
+
+<div class="row">
+<input id="nombre" placeholder="Nombre completo">
+<input id="edad" type="number" placeholder="Edad">
+</div>
+
+<div class="text-box">
+En los últimos años, el acceso masivo a la información ha transformado la forma en que las personas leen y comprenden el mundo. Sin embargo, esta abundancia informativa no siempre se traduce en mayor conocimiento. Diversos estudios señalan que la saturación de contenidos puede generar confusión, dificultar la evaluación de fuentes y reducir la profundidad del análisis.
+</div>
+
+<div id="preguntas"></div>
+
+<button onclick="calcular()">Ver resultados</button>
+
+<div id="resultados"></div>
+
+<button onclick="descargarPDF()">Descargar PDF</button>
+
+</div>
+
+<script>
+
+// PREGUNTAS
+const preguntas = [
+["Comprensión literal","¿Qué ha cambiado en los últimos años?",["La forma de escribir","La forma de leer y comprender","La cantidad de libros","La educación formal"],1],
+["Comprensión literal","¿Qué NO siempre genera la abundancia?",["Más conocimiento","Confusión","Dificultades","Problemas"],0],
+["Comprensión literal","¿Qué provoca la saturación?",["Mayor claridad","Confusión","Motivación","Creatividad"],1],
+["Comprensión literal","¿Qué se dificulta?",["Leer rápido","Evaluar fuentes","Escribir","Memorizar"],1],
+["Comprensión literal","¿Qué habilidad es clave?",["Escritura","Lectura crítica","Memorización","Velocidad lectora"],1],
+["Comprensión literal","¿Para qué sirve lectura crítica?",["Memorizar","Distinguir información relevante","Leer más rápido","Escribir mejor"],1],
+
+["Inferencial","La información excesiva:",["Siempre ayuda","Puede ser perjudicial","No afecta","Es irrelevante"],1],
+["Inferencial","El texto sugiere:",["Leer mucho basta","Importa cómo se lee","No es necesario analizar","Todo es confiable"],1],
+["Inferencial","Una persona crítica:",["Acepta todo","Cuestiona información","Evita leer","Memoriza"],1],
+["Inferencial","Problema central:",["Falta de libros","Exceso de información","Falta de tiempo","Bajo interés"],1],
+["Inferencial","Evaluar fuentes implica:",["Leer rápido","Analizar confiabilidad","Copiar información","Ignorar contenido"],1],
+["Inferencial","El lector debe:",["Ser pasivo","Ser activo","Evitar textos","Memorizar"],1],
+
+["Crítica","Propósito del texto:",["Informar y reflexionar","Narrar","Entretener","Describir"],0],
+["Crítica","La infoxicación es:",["Positiva","Negativa","Neutral","Irrelevante"],1],
+["Crítica","¿El texto presenta evidencia?",["No","Sí, menciona estudios","Solo opiniones","No es claro"],1],
+["Crítica","Tono del texto:",["Crítico","Humorístico","Trágico","Informal"],0],
+["Crítica","¿Es confiable?",["Poco","Moderado","Alto","Nada"],2],
+["Crítica","Postura del autor:",["Pasividad","Pensamiento crítico","Memorización","Rapidez"],1],
+
+["Vocabulario","“Saturación” significa:",["Escasez","Exceso","Falta","Orden"],1],
+["Vocabulario","“Evaluar fuentes” implica:",["Leer","Analizar confiabilidad","Copiar","Memorizar"],1],
+["Vocabulario","“Profundidad” se refiere a:",["Leer rápido","Comprender detalladamente","Leer poco","Memorizar"],1],
+["Vocabulario","“Validez” significa:",["Cantidad","Veracidad","Tamaño","Forma"],1],
+["Vocabulario","“Relevante” significa:",["Poco importante","Importante","Largo","Difícil"],1],
+["Vocabulario","“Fundamentada” implica:",["Sin base","Con argumentos","Rápida","Simple"],1],
+
+["Análisis","Tipo de texto:",["Narrativo","Expositivo-argumentativo","Descriptivo","Literario"],1],
+["Análisis","Estructura:",["Problema–análisis","Narración","Diálogo","Secuencia"],0],
+["Análisis","Idea principal:",["Leer más","Importancia de lectura crítica","Tecnología","Libros"],1],
+["Análisis","Público objetivo:",["Niños","Lectores generales","Científicos","Escritores"],1],
+
+["Hábitos","Frecuencia lectura:",["Nunca","1 vez a la semana","2–3 veces","Todos los días"],2],
+["Hábitos","Motivación:",["Nada","Poco","Medianamente","Mucho"],3]
+];
+
+// RENDER
+let html="";
+let actual="";
+preguntas.forEach((p,i)=>{
+if(p[0]!==actual){
+html+=`<div class="section-title">${p[0]}</div>`;
+actual=p[0];
+}
+html+=`<div class="question">
+<div class="question-title">${i+1}. ${p[1]}</div>
+<div class="options">`;
+
+p[2].forEach((op,j)=>{
+html+=`<label class="option">
+<input type="radio" name="q${i}" value="${j}">
+<span>${op}</span>
+</label>`;
+});
+
+html+="</div></div>";
+});
+
+document.getElementById("preguntas").innerHTML=html;
+
+// VALIDAR
+function validar(){
+if(!nombre.value || !edad.value) return false;
+for(let i=0;i<preguntas.length;i++){
+if(!document.querySelector(`input[name="q${i}"]:checked`)) return false;
+}
+return true;
+}
+
+// CALCULO POR HABILIDAD
+function calcular(){
+
+if(!validar()){
+alert("Debes completar todas las preguntas");
+return;
+}
+
+let habilidades = {
+literal:[0,5],
+inferencial:[6,11],
+critica:[12,17],
+vocab:[18,23],
+analisis:[24,27],
+habitos:[28,29]
+};
+
+function calc(r){
+let t=0;
+for(let i=r[0];i<=r[1];i++){
+let val=parseInt(document.querySelector(`input[name="q${i}"]:checked`).value);
+if(val===preguntas[i][3]) t++;
+}
+return Math.round((t/(r[1]-r[0]+1))*100);
+}
+
+function bar(p){
+let c=p>=70?"good":p>=50?"mid":"bad";
+return `<div class="progress"><div class="bar ${c}" style="width:${p}%">${p}%</div></div>`;
+}
+
+function sugerencias(){
+return `<ul>
+<li>Practica ensayos PAES semanalmente</li>
+<li>Subraya ideas clave</li>
+<li>Entrena inferencias</li>
+</ul>`;
+}
+
+let out=`<div class="result"><h3>Resultados</h3>`;
+
+for(let h in habilidades){
+let p=calc(habilidades[h]);
+out+=`<p><b>${h.toUpperCase()}</b></p>
+${bar(p)}
+<p class="${p<70?'weak':''}">${p<70?'Debilidad detectada':''}</p>
+${sugerencias()}`;
+}
+
+out+=`<p><b>Interpretación:</b> ${
+Object.values(habilidades).some(r=>calc(r)<70)
+?"Existen brechas en comprensión lectora que afectan el rendimiento PAES."
+:"Nivel adecuado con potencial de mejora."
+}</p></div>`;
+
+document.getElementById("resultados").innerHTML=out;
+}
+
+// PDF
+async function descargarPDF(){
+const { jsPDF } = window.jspdf;
+const doc = new jsPDF();
+doc.text(document.getElementById("resultados").innerText,10,10);
+doc.save("diagnostico.pdf");
+}
+
+</script>
+
+</body>
+</html>
